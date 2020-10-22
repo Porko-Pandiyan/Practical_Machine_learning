@@ -1,0 +1,89 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(caret)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+library(gbm)
+```
+
+```{r}
+train <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"))
+test <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"))
+
+colnames(train)
+summary(train)
+dim(train)
+```
+We can clearly see that there are 160 columns or variables , and most of the columns have an NA value in them . So we eliminate all the columns with NA . 
+```{r}
+dim(train)
+non_zero_var <- nearZeroVar(train)
+clean_train <- train[,-non_zero_var]
+clean_test <- test[,-non_zero_var]
+
+dim(clean_train)
+
+na_val_col <- sapply(clean_train, function(x) mean(is.na(x))) > 0.95
+clean_train <- clean_train[,na_val_col == FALSE]
+clean_test <- clean_test[,na_val_col == FALSE]
+
+dim(clean_train)
+```
+From the data summary we can also see that there are non numeric variable ,which we definetely have to remove.
+```{r}
+clean_train <- clean_train[,8:59]
+clean_test <- clean_test[,8:59]
+
+dim(clean_train)
+```
+So now we are left with 42 variable to play around. Lets see what they are;
+```{r}
+colnames(clean_train)
+```
+Let us now split the training data into train and test set with 70:30 ratio
+```{r}
+inTrain <- createDataPartition(clean_train$classe, p=0.7, list=FALSE)
+final_train <- clean_train[inTrain,]
+final_test <- clean_train[-inTrain,]
+dim(training)
+dim(testing)
+```
+```{r}
+summary(training)
+```
+
+Now , we have preprocessed the data and we have also split it into train and testing dataset .
+Next we have to figure out the right model for our data.
+Lets begin with a Random Forest.
+```{r}
+RF_modfit <- train(classe ~ ., data = final_train, method = "rf", ntree = 100)
+RF_prediction <- predict(RF_modfit, final_test)
+RF_pred_conf <- confusionMatrix(RF_prediction, factor(final_test$classe))
+RF_pred_conf
+```
+Next , we try a Decision tree model
+```{r}
+DT_model <- train(classe ~ ., data = final_train, method="rpart")
+DT_pred<- predict(DT_model, final_test)
+DT_conf <- confusionMatrix(DT_pred, factor(final_test$classe))
+DT_conf
+```
+The Accuracy for Decision Tree is only 58% . 
+Lets try Boosting.
+```{r}
+GBM_model <- train(classe ~ ., data = final_train, method = "gbm", verbose = FALSE)
+GBM_pred <- predict(GBM_model, final_test)
+GBM_conf <- confusionMatrix(GBM_pred, factor(final_test$classe))
+GBM_conf
+```
+Among the three models we trained ,namely,  Random Forest , Decision Tree and Gradient Boosting , cleraly Random Forest model out performs the remaining , with an accuracy of 99.37%.
+Lets use the Randome forest model to predict the results.
+```{r}
+Final_RF_prediction <- predict(RF_modfit, clean_test )
+Final_RF_prediction
+```
+
